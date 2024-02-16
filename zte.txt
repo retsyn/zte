@@ -1,0 +1,41 @@
+[ISubPalette, "Tool:ZTE",2]
+
+[IButton, "Tool:ZTE:SDiv All 2", "Set all SubTools to level 2",
+    // There's a tool called
+
+    // The following line will set divisions, but only on what is selected...
+    [VarDef, subtooli, 0]
+    [VarSet, subtooli, 0]
+
+    [Loop, [SubToolGetCount],
+        [SubToolSelect, [Var, subtooli]]
+        [ISet, Tool:Geometry:SDiv, 2]
+        [VarSet, subtooli, ([Var, subtooli] + 1)]
+    ]
+    [Note, [StrMerge, "Set ", [SubToolGetCount], " subtools to SDiv 2."]]
+    ,
+    ,
+    ,
+    ,
+    ,
+]
+
+[IButton, "Tool:ZTE:SDiv All 3", "Set all SubTools to level 3",
+    // There's a tool called
+
+    // The following line will set divisions, but only on what is selected...
+    [VarDef, subtooli, 0]
+    [VarSet, subtooli, 0]
+
+    [Loop, [SubToolGetCount],
+        [SubToolSelect, [Var, subtooli]]
+        [ISet, Tool:Geometry:SDiv, 3]
+        [VarSet, subtooli, ([Var, subtooli] + 1)]
+    ]
+    [Note, [StrMerge, "Set ", [SubToolGetCount], " subtools to SDiv 3."]]
+    ,
+    ,
+    ,
+    ,
+    ,
+]
