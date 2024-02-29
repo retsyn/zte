@@ -1,18 +1,90 @@
+[VarDef, lastTokenRead, ""]
+
+[RoutineDef, RenameLvl,
+
+    // Find where the string "_lv" appears.
+    [VarDef, tokenIndex, 0]
+    [VarDef, currentLevel, ""]
+    [VarSet, tokenIndex, [StrFind, "_lv", nameString]]
+    [If, tokenIndex == -1,
+        // If "lv" is in the token:
+        // Remove this error message.
+        ,
+        // If "lv" is not in the token:
+        [VarSet, currentLevel, [StrExtract, nameString, (tokenIndex + 3), (tokenIndex + 3)]]
+        [VarSet, lastTokenRead, currentLevel]
+
+        [VarDef, strPrefix, ""]
+        [VarDef, strSuffix, ""]
+        // Get the beginning of the string
+        [VarSet, strPrefix, [StrExtract, nameString, 0, (tokenIndex + 2)]]
+        [VarSet, strSuffix, [StrExtract, nameString, (tokenIndex + 4), [StrLength, nameString]]]
+        [VarSet, lastTokenRead, [StrMerge, strPrefix, setLevel, strSuffix]]
+    ]
+    
+    ,
+    nameString, setLevel
+]
+
+
+[RoutineDef, RenameSubTool,
+
+    [VarDef, placehold, 0]
+    [VarSet, placehold, 0]
+    [SubToolSelect, #toolsIndex]
+    [Loop, [SubToolGetCount],
+        [If, [IsEnabled, "Tool:Subtool:MoveUp"],
+            [IPress, "Tool:Subtool:MoveUp"]
+            [VarAdd, placehold, 1]
+            ,
+            [LoopExit]
+        ]
+        ,
+        indexcounter
+    ]
+
+    [VarDef, subtoolName, ""]
+    [VarSet, subtoolName, [IGetTitle, Tool:Subtool:ItemInfo]]
+    [RoutineCall, RenameLvl, subtoolName, newLevel]
+    [ToolSetPath, , lastTokenRead]
+
+    [Loop, [Var, #placehold],
+        [IPress, "Tool:Subtool:MoveDown"]
+        ,
+        indexCounterTwo
+    ]
+
+    ,
+    toolsIndex, newLevel
+]
+
+
+
 [ISubPalette, "Tool:ZTE",2]
 
+
 [IButton, "Tool:ZTE:SDiv All 2", "Set all SubTools to level 2",
-    // There's a tool called
+    
 
     // The following line will set divisions, but only on what is selected...
     [VarDef, subtooli, 0]
     [VarSet, subtooli, 0]
 
     [Loop, [SubToolGetCount],
+        // Uncomment this when it's ready, as it'll go in certified Zedio.
         [SubToolSelect, [Var, subtooli]]
+        [If, [IsEnabled, "Tool:Geometry:SDiv"] == 0,
+            [IPress, "Tool:Geometry:Divide"]
+            ,
+
+        ]
+        [RoutineCall, RenameSubtool, subtooli, 2]
+        
         [ISet, Tool:Geometry:SDiv, 2]
         [VarSet, subtooli, ([Var, subtooli] + 1)]
     ]
     [Note, [StrMerge, "Set ", [SubToolGetCount], " subtools to SDiv 2."]]
+
     ,
     ,
     ,
@@ -20,15 +92,25 @@
     ,
 ]
 
-[IButton, "Tool:ZTE:SDiv All 3", "Set all SubTools to level 3",
-    // There's a tool called
 
-    // The following line will set divisions, but only on what is selected...
+[IButton, "Tool:ZTE:SDiv All 3", "Set all SubTools to level 3",
     [VarDef, subtooli, 0]
     [VarSet, subtooli, 0]
 
     [Loop, [SubToolGetCount],
         [SubToolSelect, [Var, subtooli]]
+        [RoutineCall, RenameSubtool, subtooli, 3]
+        // If we are at no subdivisions, then divide once.
+        [If, [IsEnabled, "Tool:Geometry:SDiv"] == 0,
+            [IPress, "Tool:Geometry:Divide"]
+            ,
+            
+        ]
+        // If we are less than three at this point, once again!
+        [If, [IGet, "Tool:Geometry:SDiv"] < 3,
+            [IPress, "Tool:Geometry:Divide"]
+        ]
+
         [ISet, Tool:Geometry:SDiv, 3]
         [VarSet, subtooli, ([Var, subtooli] + 1)]
     ]
