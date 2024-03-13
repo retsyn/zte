@@ -1,4 +1,10 @@
 [VarDef, lastTokenRead, ""]
+[VarDef, lastToolVisCheck, 0]
+[VarDef, lastIsolateFilename, ""]
+[VarDef, lastFoundSideToken, ""]
+[VarDef, lastFoundFirstToken, ""]
+[VarDef, lastEquateString, 0]
+[VarDef, lastLearnLevel, 0]
 
 [RoutineDef, RenameLvl,
 
@@ -24,6 +30,58 @@
     
     ,
     nameString, setLevel
+]
+
+
+[RoutineDef, FullyRenameSubTool,
+    [VarDef, placehold, 0]
+    [VarSet, placehold, 0]
+    [Loop, [SubToolGetActiveIndex],
+        [If, [IsEnabled, "Tool:Subtool:MoveUp"],
+            [IPress, "Tool:Subtool:MoveUp"]
+            [VarAdd, placehold, 1]
+            ,
+            [LoopExit]
+        ]
+    ]
+
+    [ToolSetPath, , newString]
+
+    [Loop, [Var, #placehold],
+        [IPress, "Tool:Subtool:MoveDown"]
+        ,
+        indexCounterTwo
+    ]
+    ,
+    newString
+]
+
+
+[RoutineDef, IsolateFileName, 
+    // Commands
+
+    [VarDef, extractedChar, ""]
+    [VarDef, lastSlash, 0]
+    [VarSet, extractedChar, ""]
+    [VarSet, lastSlash, 0]
+    [VarDef, slashOffset, 0]
+    [VarSet, slashOffset, 0]
+    
+    [Loop, [StrLength, fullPath],
+        [VarSet, extractedChar, [StrExtract, fullpath, iterator, 0]]
+        
+        [RoutineCall, EquateString, extractedChar, "/"]
+        [If, [Var, lastEquateString] == 1,
+            [VarSet, lastSlash, iterator]
+            [VarSet, slashOffset, 1]
+            ,
+        ]
+        , 
+        iterator
+    ]
+    [VarSet, lastIsolateFilename, [StrExtract, fullPath, lastSlash + slashOffset, [StrLength, fullPath]]]
+    ,
+    fullPath
 ]
 
 
@@ -60,10 +118,183 @@
 
 
 
+[RoutineDef, checkSubtoolVis,
+    [VarSet, subToolpath, [StrMerge, "Tool:Sub Tool:", [IGetTitle, "Tool:Current Tool", 0]]]
+    [If, [IModGet, [Var, subToolPath]] >= 16,
+        [VarSet, lastToolVisCheck, 1]
+        ,
+        [VarSet, lastToolVisCheck, 0]
+    ]
+]
+
+[RoutineDef, learnLvl,
+    // Learns what level a subtool is.
+    // Capture the divLevel straight from the geometry settings
+    [VarSet, lastLearnLevel, [IGet, "Tool:Geometry:SDiv"]]
+]
+
+// Test string equivalence
+[RoutineDef, EquateString,
+    // Only by both finding a substring inside a string of the same size, do we prove equivalence.
+
+    [If, [StrFind, firstString, secondString, 0] != -1,
+        [If, [StrLength, firstString] == [StrLength, secondString],
+            [VarSet, lastEquateString, 1]
+        ,
+            [VarSet, lastEquateString, 0]
+        ]
+    ,
+        [VarSet, lastEquateString, 0]
+    ]
+    ,
+    firstString, secondString
+]
+
+[RoutineDef, smartRename,
+
+    // Renames the current subtool.
+    [VarDef, firstToken, ""]
+    [VarDef, sideToken, ""]
+
+    [VarSet, firstToken, [StrAsk, "", "Provide Name (Starting Token)"]]
+
+    // Then get the level.  
+    [RoutineCall, learnLvl]
+
+    // Get the side token:
+    [If, [IGet, "Tool:ZedioTool:Side Token"] == 0,
+        [VarSet, sideToken, "lf"]
+    ]
+    [If, [IGet, "Tool:ZedioTool:Side Token"] == 1,
+        [VarSet, sideToken, "cn"]
+    ]
+    [If, [IGet, "Tool:ZedioTool:Side Token"] == 2,
+        [VarSet, sideToken, "rt"]
+    ]
+
+    // Then get the iteration (For similar names?)
+    // TODO
+
+    [VarDef, finalString, ""]
+    [VarSet, finalString, [StrMerge, firstToken, "_lv", lastLearnLevel, "_", sideToken, "_0_geo"]]
+    [RoutineCall, FullyRenameSubTool, finalString]
+
+]
+
+[RoutineDef, getSidetoken,
+
+
+    [VarSet, lastFoundSideToken, "cn"]    
+
+    [If, [StrFind, "_lf_", nameString] > (-1),
+        [VarSet, lastFoundSideToken, "lf"]    
+    ]
+
+
+    [If, [StrFind, "_rt_", nameString] > (-1),
+        [VarSet, lastFoundSideToken, "rt"]    
+    ]
+
+    [If, [StrFind, "_bt_", nameString] > (-1),
+        [VarSet, lastFoundSideToken, "bt"]    
+    ]
+
+    [If, [StrFind, "_tp_", nameString] > (-1),
+        [VarSet, lastFoundSideToken, "tp"]    
+    ]
+    
+    ,
+    nameString
+]
+
+[RoutineDef, getFirstToken,
+
+    [VarSet, lastFoundFirstToken, ""]
+    [VarDef, strIndex, 0]
+    [VarSet, strIndex, 0]
+
+    [VarSet, strIndex, [StrFind, "_", fullName, 0]]
+
+    [VarSet, lastFoundFirstToken, [StrExtract, fullName, 0, strIndex - 1]]
+
+    ,
+    fullName
+]
+
+
+[RoutineDef, checkNames,
+
+    [VarDef, subtoolName, ""]
+
+    [VarDef, firstToken, ""]
+
+    // Loops through all subtools and acquire names in a string for analysis
+    [Loop, [SubToolGetCount],
+        // Select the next subtool:
+        [SubToolSelect, iterator]
+
+        // Isolate the first token:
+        [VarSet, subtoolName, [IGetTitle, "Tool:Current Tool", 0]]
+        [RoutineCall, IsolateFileName, subtoolName]
+        [RoutineCall, getFirstToken, lastIsolateFilename]
+
+        [VarSet, firstToken, lastFoundFirstToken]
+        
+        // Get level
+        [RoutineCall, learnLvl]
+
+        // Isolate the side token:
+        [RoutineCall, getSidetoken, lastIsolateFilename]
+
+        [VarDef, finalString, ""]
+        [VarSet, finalString, [StrMerge, firstToken, "_lv", lastLearnLevel, "_0_", lastFoundSideToken, "_geo"]]
+        [RoutineCall, FullyRenameSubTool, finalString]
+        ,
+        iterator
+    ]
+]
+
+
 [ISubPalette, "Tool:ZTE",2]
 
 
-[IButton, "Tool:ZTE:SDiv All 2", "Set all SubTools to level 2",
+
+[IButton, "Tool:ZTE:SDiv 1", "Set all SubTools to level 1",
+    
+
+    // The following line will set divisions, but only on what is selected...
+    [VarDef, subtooli, 0]
+    [VarSet, subtooli, 0]
+
+    [Loop, [SubToolGetCount],
+        // Uncomment this when it's ready, as it'll go in certified Zedio.
+        [SubToolSelect, [Var, subtooli]]
+
+        // Check visibility of this subtool:
+        [RoutineCall, checkSubtoolVis]
+        [If, lastToolVisCheck == 0,
+            // If not visible, perform no operation:
+            [VarSet, subtooli, ([Var, subtooli] + 1)]
+            [LoopContinue]
+        ]
+
+        [RoutineCall, RenameSubtool, subtooli, 1]
+        
+        [ISet, Tool:Geometry:SDiv, 1]
+        [VarSet, subtooli, ([Var, subtooli] + 1)]
+    ]
+    [Note, [StrMerge, "Set ", [SubToolGetCount], " subtools to SDiv 1."]]
+
+    ,
+    ,
+    45
+    ,
+    ,
+    ,
+]
+
+
+[IButton, "Tool:ZTE:SDiv 2", "Set all SubTools to level 2",
     
 
     // The following line will set divisions, but only on what is selected...
@@ -87,13 +318,14 @@
 
     ,
     ,
+    45
     ,
     ,
     ,
 ]
 
 
-[IButton, "Tool:ZTE:SDiv All 3", "Set all SubTools to level 3",
+[IButton, "Tool:ZTE:SDiv 3", "Set all SubTools to level 3",
     [VarDef, subtooli, 0]
     [VarSet, subtooli, 0]
 
@@ -117,7 +349,23 @@
     [Note, [StrMerge, "Set ", [SubToolGetCount], " subtools to SDiv 3."]]
     ,
     ,
+    45
     ,
     ,
     ,
 ]
+
+[IButton, "Tool:ZTE:Smart Rename", "Provide first token and decide the rest of the name.",
+    [RoutineCall, smartRename]
+    ,
+]
+
+[ISlider, "Tool:ZTE:Side Token", 1, 1, 0, 2, "0: lf  1: cn  2: rt",
+,
+]
+
+[IButton, "Tool:ZTE:Format All Names", "Makes all subtools have pipeline standardized names",
+
+    [RoutineCall, checkNames]
+]
+
