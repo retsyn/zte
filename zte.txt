@@ -102,7 +102,10 @@
     ]
 
     [VarDef, subtoolName, ""]
-    [VarSet, subtoolName, [IGetTitle, Tool:Subtool:ItemInfo]]
+    [VarSet, subtoolName, [IGetTitle, Tool:Subtool:ItemInfo, 0]]
+    // For some reason, IGetTitle adds a '.' to the end. We have to shave it off.
+    [VarSet, subtoolName, [StrExtract, subtoolName, 0, [StrLength, subtoolName] - 2]]
+
     [RoutineCall, RenameLvl, subtoolName, newLevel]
     [ToolSetPath, , lastTokenRead]
 
@@ -115,6 +118,7 @@
     ,
     toolsIndex, newLevel
 ]
+
 
 
 
